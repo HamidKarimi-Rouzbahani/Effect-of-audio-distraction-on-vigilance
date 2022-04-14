@@ -1,5 +1,5 @@
 function TrainVigDistraction(Subj)
-Screen('Preference', 'SkipSyncTests',1);
+% Screen('Preference', 'SkipSyncTests',1);
 % developed by Hamid Karimi-Rouzbahani on 23/March/2022
 % modified by Hamid Karimi-Rouzbahani on 14/April/2022: changed rng('default') to rng(1) 
 % also renamed saved files including the word "distraction"
