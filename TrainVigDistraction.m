@@ -5,7 +5,7 @@ function TrainVigDistraction(Subj)
 % also renamed saved files including the word "distraction"
 
 commandwindow;
-rng(1)
+rng(5)
 if ~IsOctave
     commandwindow;
 else

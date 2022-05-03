@@ -5,9 +5,11 @@ function TestVigDistraction(Subj)
 % modified by Hamid Karimi-Rouzbahani on 14/April/2022: showing break
 % instructions after each conditions's blocks 
 % also renamed saved files including the word "distraction"
+% modified by Hamid Karimi-Rouzbahani on 3/May/2022 to have two freq
+% conditions and 2 audio recording (question/listening) conditions
 
 commandwindow;
-rng('default')
+rng(5)
 if ~IsOctave
     commandwindow;
 else
@@ -38,7 +40,7 @@ non_target_time_gap_constant=0.2494; % time between non-target dots
 
 % saving vidoe and audio
 SaveMovie=0; % whether to save the screen as a movie (1) or not (0)
-SaveAudio=1; % whether to save audio file during each block (1) or not (0)
+SaveAudio=[1 0]; % whether to save audio file during each block (1) or not (0)
 Fs=44100; % sound sampling freq
 Audio_quality=16; % 8, 16, or 24
 Mono_Stereo=2;  % mono=1; sterio =2
@@ -65,9 +67,12 @@ Num_moving_dots=2; % do not need to change this parameter
 
 
 
-Num_of_conditions=length(percentage_target_cond);
-Sets_of_subjects=10; % how many groups of subjects do you want to repeat all the conditions for?
+Num_of_conditions=length([percentage_target_cond SaveAudio]); % Conditions are defined based on freq levels and audio recording
+Condition_details=combvec(percentage_target_cond,SaveAudio)'; % now combining the two independent variables
+
+Sets_of_subjects=1; % how many groups of subjects do you want to repeat all the conditions for?
 % Generating counter-balanced blocks in terms of frequency conditions and cued colours
+
 conds_perm=repmat(perms([1:Num_of_conditions]),[Sets_of_subjects 1]);
 Block_condition=nan(size(conds_perm,1),Num_of_conditions*Blocks_per_condition);
 Cued_color_in_block=ones(size(conds_perm,1),Num_of_conditions*Blocks_per_condition);
@@ -214,8 +219,10 @@ try
         % information for the trial)
     end
     for Block_Num=1:Num_of_conditions*Blocks_per_condition
-        percentage_target=percentage_target_cond(1,Block_condition(Subj,Block_Num));
-        Condition_string=['Freq_',sprintf('%.2f', percentage_target)];
+        percentage_target=Condition_details(Block_condition(Subj,Block_Num),1);
+        Audio_record=Condition_details(Block_condition(Subj,Block_Num),2);
+        Condition_string=['Freq_',sprintf('%.2f', percentage_target),'_Aud_',sprintf('%d', Audio_record)];
+        
         
         if Block_Num==1
             background_colour=0;
@@ -248,6 +255,14 @@ try
         end
         
         Screen('TextSize',wpoint, 30);
+        
+        if Audio_record==1
+            message = ['\n\n\n ---  It is a Question block  ---\n\n\n\n\n'];
+        else
+            message = ['\n\n\n ---  It is a Listening block  ---\n\n\n\n\n'];
+        end
+        DrawFormattedText(wpoint, message,'center','center',[255 255 255]);
+        
         if Cued_color_in_block(Subj,Block_Num)==1
             target_color='RED';
             block_target_color=1;
@@ -255,10 +270,10 @@ try
                 message = ['\n\n Please take a break before the next block !!!!'];
                 DrawFormattedText(wpoint, message,'center','center',[255 255 255]);
                 message = ['\n\n\n\n\n ---  Respond to ',target_color, ' dots  ---\n\n\n\n\n Press the button to start !!! \n\n\n\n\n'];
-                DrawFormattedText(wpoint, message,'center','center',second_dot_colour);
+                DrawFormattedText(wpoint, message,'center','center',first_dot_colour);
             else
                 message = ['\n\n\n\n\n ---  Respond to ',target_color, ' dots  ---\n\n\n\n\n Press the button to start !!! \n\n\n\n\n'];
-                DrawFormattedText(wpoint, message,'center','center',second_dot_colour);
+                DrawFormattedText(wpoint, message,'center','center',first_dot_colour);
             end
         else
             target_color='BLUE';
@@ -643,7 +658,7 @@ try
         if MEG; io64(p.ioObj,p.address,p.triggernums(1,5)-128); trigger_on = GetSecs; end           % MEG trigger on
         if MEG; WaitSecs(p.trigger_duration-(GetSecs-trigger_on)); io64(p.ioObj,p.address,0); end   % MEG trigger off
         
-        if SaveAudio==1
+        if Audio_record==1
             Voice = audiorecorder(Fs, Audio_quality, Mono_Stereo);
             Voice.StartFcn = 'disp(''Start speaking.'')';
             Voice.StopFcn = 'disp(''End of recording.'')';
@@ -959,12 +974,12 @@ try
             'Num_moving_dots','Trials_per_block','key_pressedTotal',...
             'dot_color','dot_color2','block_target_color','FirstAppearTop1','FirstAppearTop2',...
             'FirstShadeTop1','FirstShadeTop2','response_button','xy_final_1','xy_final_2',...
-            'Block_condition','Cued_color_in_block','cue_time_indx','cue_duration');
+            'Block_condition','Cued_color_in_block','cue_time_indx','cue_duration','Condition_details');
         
         if SaveMovie==1
             Screen('FinalizeMovie', movie);
         end
-        if SaveAudio==1
+        if Audio_record==1
             audiowrite(['Subj_',num2str(Subj),'_Blk_',num2str(Block_Num),'_',Condition_string,...
                 '_test_Distraction.wav'], getaudiodata(Voice), Fs)
         end
