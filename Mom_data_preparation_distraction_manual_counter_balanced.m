@@ -1,14 +1,16 @@
 %% Sample response processing
 % developed by Hamid Karimi-Rouzbahani on 09/Sep/2022
+% Amended by Hamid Karimi-Rouzbahani on 15/Oct/2022 to calculate the
+% results for more than one subject
 
 clc
 clear all;
 
-subjects=[1] ; % enumerate subjects you want the include in analysis
+subjects=[1 2 3 4 5] ; % enumerate subjects you want the include in analysis
 Audio_recorded = 1; % put 1 if audio was recorded and 0 otherwise
-percentage_target_cond=[0.5 0.09]; % Frequency of targets across conditions
-chunk_in_each_frequency=[1 2]; % enumerate chunks per each target frequency
-blocks_in_each_chunk=[1 2]; % enumerate blocks per each chunk
+percentage_target_cond=[0.5 0.12]; % Frequency of targets across conditions
+chunk_in_each_frequency=[1]; % enumerate chunks per each target frequency
+blocks_in_each_chunk=[1:10]; % enumerate blocks per each chunk
 
 
 dirs=dir();
@@ -89,7 +91,7 @@ for Subj=subjects
                         dot_in_trial=dot_num-(tr-1).*Num_moving_dots;
                         
                         
-                        if sum(dot_in_trial==top_events(:,tr))==1 && dot_color(dot_in_trial,tr)==Cued_color_in_block(Subj,blk)
+                        if sum(dot_in_trial==top_events(:,tr))==1 && dot_color(dot_in_trial,tr)==Cued_color_in_block(1,blk)
                             g=g+1;
                             if isnan(reaction_times(dot_in_trial,tr)) && (top_events(tr)~=top_targets(tr))
                                 tn_att=tn_att+1;    % number of non-target events with no resp;
@@ -107,7 +109,7 @@ for Subj=subjects
                             end
                         end
                         
-                        if sum(dot_in_trial==top_events2(:,tr))==1 && dot_color2(dot_in_trial,tr)==Cued_color_in_block(Subj,blk)
+                        if sum(dot_in_trial==top_events2(:,tr))==1 && dot_color2(dot_in_trial,tr)==Cued_color_in_block(1,blk)
                             g=g+1;
                             if isnan(reaction_times2(dot_in_trial,tr)) && (top_events2(tr)~=top_targets2(tr))
                                 tn_att=tn_att+1;
