@@ -2,12 +2,13 @@
 % developed by Hamid Karimi-Rouzbahani on 09/Sep/2022
 % Amended by Hamid Karimi-Rouzbahani on 15/Oct/2022 to calculate the
 % results for more than one subject
-
+% Amended by Hamid Karimi-Rouzbahani on 16/Oct/2022 to count the number of
+% extra cues that each subject pressed the button ("R") for 
 clc
 clear all;
 
 subjects=[1 2 3 4 5] ; % enumerate subjects you want the include in analysis
-Audio_recorded = 1; % put 1 if audio was recorded and 0 otherwise
+Audio_recorded = 0; % put 1 if audio was recorded and 0 otherwise
 percentage_target_cond=[0.5 0.12]; % Frequency of targets across conditions
 chunk_in_each_frequency=[1]; % enumerate chunks per each target frequency
 blocks_in_each_chunk=[1:10]; % enumerate blocks per each chunk
@@ -27,13 +28,20 @@ for Subj=subjects
                     
                     for i=3:size(dirs,1)
                         if strcmp(dirs(i).name(end-3:end),'.mat')
-                            %                     save(['Subj_',num2str(Subj),'_Blk_',num2str(Block_Num),'_Chunk_',num2str(chunk),'_','_',Condition_string,'_test_Distraction.mat']
-                            %                     if strcmp(dirs(i).name(1:19+length(num2str(Subj))+length(num2str(blk))+1),['Subj_',num2str(Subj),'_Blk_',num2str(blk),'_Freq_',sprintf('%.2f',cndss)])
-                            
+
                             Condition_string=['Freq_',sprintf('%.2f', cndss),'_Aud_',sprintf('%d', Audio_recorded)];
                             if strcmp(dirs(i).name,['Subj_',num2str(Subj),'_Blk_',num2str(blk),'_Chunk_',num2str(chunk),'_','_',Condition_string,'_test_Distraction.mat'])
                                 load(dirs(i).name);
                                 [dirs(i).name]
+
+                                % Cue request detection
+                                refractory=300; % ignore cue presses with intervals shorter than this /60
+                                cued=0;
+                                for tt=refractory+1:length(cue_time_indx)
+                                    if cue_time_indx(tt-1)==0 && cue_time_indx(tt)==1 && sum(cue_time_indx(tt-refractory:tt-1))==0
+                                        cued=cued+1;
+                                    end
+                                end                               
                                 Targ_Freq_Condition_blk=str2double(dirs(i).name(end-30:end-27));
                             end
                         end
@@ -154,6 +162,10 @@ for Subj=subjects
                         
                         % Reaction time
                         Data{cond,7}(blk_all,Subj)=correct_reaction_times_att;
+                        
+                        % Record cues as well
+                        Data{cond,8}(blk_all,Subj)=cued;
+
                     else
                         Data{cond,1}(blk_all,Subj)=nan;
                         Data{cond,2}(blk_all,Subj)=nan;
@@ -162,6 +174,7 @@ for Subj=subjects
                         Data{cond,5}(blk_all,Subj)=nan;
                         Data{cond,6}(blk_all,Subj)=nan;
                         Data{cond,7}(blk_all,Subj)=nan;
+                        Data{cond,8}(blk_all,Subj)=nan;
                     end
             end
         end
@@ -178,6 +191,7 @@ for Subj=subjects
             Data{cond,5}(:,Subj)=nan;
             Data{cond,6}(:,Subj)=nan;
             Data{cond,7}(:,Subj)=nan;
+            Data{cond,8}(:,Subj)=nan;
         end
     end
     cond=1;
@@ -185,13 +199,17 @@ for Subj=subjects
     Mean_Hit_rate=nanmean(Hit_rate_condition);
     Reaction_time_condition=Data{cond,7}(:,Subj); % reaction time in condition
     Mean_Reaction_time=nanmean(Reaction_time_condition);
+    Cues_shown_condition=Data{cond,8}(:,Subj); % extra cues shown in condition
+    Mean_cues_shown=nanmean(Cues_shown_condition);
     
     HR=[Hit_rate_condition;nan(5,1);Mean_Hit_rate];
     RT=[Reaction_time_condition;nan(5,1);Mean_Reaction_time];
-    T = table(HR,RT);
-    T.Properties.VariableNames = {['Hit_rate_target_freq_',num2str(percentage_target_cond(cond)*100)] ['RT_target_freq_',num2str(percentage_target_cond(cond)*100)]};
+    Cues=[Cues_shown_condition;nan(5,1);Mean_cues_shown];
+
+    T = table(HR,RT,Cues);
+    T.Properties.VariableNames = {['Hit_rate_target_freq_',num2str(percentage_target_cond(cond)*100)] ['RT_target_freq_',num2str(percentage_target_cond(cond)*100)] ['Num_of_extra_cues_',num2str(percentage_target_cond(cond)*100)]};
     Ttotal=T;
-    Data_csv_total=[HR RT];
+    Data_csv_total=[HR RT Cues];
     
     for cond=2:size(Data,1)
         
@@ -199,12 +217,16 @@ for Subj=subjects
         Mean_Hit_rate=nanmean(Hit_rate_condition);
         Reaction_time_condition=Data{cond,7}(:,Subj); % reaction time in condition
         Mean_Reaction_time=nanmean(Reaction_time_condition);
+        Cues_shown_condition=Data{cond,8}(:,Subj); % extra cues shown in condition
+        Mean_cues_shown=nanmean(Cues_shown_condition);
         HR=[Hit_rate_condition;nan(5,1);Mean_Hit_rate];
         RT=[Reaction_time_condition;nan(5,1);Mean_Reaction_time];
-        T = table(HR,RT);
-        T.Properties.VariableNames = {['Hit_rate_target_freq_',num2str(percentage_target_cond(cond)*100)] ['RT_target_freq_',num2str(percentage_target_cond(cond)*100)]};
+        Cues=[Cues_shown_condition;nan(5,1);Mean_cues_shown];
+
+        T = table(HR,RT,Cues);
+        T.Properties.VariableNames = {['Hit_rate_target_freq_',num2str(percentage_target_cond(cond)*100)] ['RT_target_freq_',num2str(percentage_target_cond(cond)*100)] ['Num_of_extra_cues_',num2str(percentage_target_cond(cond)*100)]};
         Ttotal=[Ttotal T];
-        Data_csv_total=horzcat(Data_csv_total,[HR RT]);
+        Data_csv_total=horzcat(Data_csv_total,[HR RT Cues]);
     end
     
     filename = ['MoM_data_distraction_audio_',num2str(Audio_recorded),'_manual_counter_balanced.xlsx']; % Change the name to anything you prefer
