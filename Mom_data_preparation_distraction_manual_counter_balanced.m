@@ -3,11 +3,11 @@
 % Amended by Hamid Karimi-Rouzbahani on 15/Oct/2022 to calculate the
 % results for more than one subject
 % Amended by Hamid Karimi-Rouzbahani on 16/Oct/2022 to count the number of
-% extra cues that each subject pressed the button ("R") for 
+% extra cues that each subject pressed the button ("R") for
 clc
 clear all;
 
-subjects=[1 2 3 4 5] ; % enumerate subjects you want the include in analysis
+subjects=[1 2 3 10:34] ; % enumerate subjects you want the include in analysis
 Audio_recorded = 0; % put 1 if audio was recorded and 0 otherwise
 percentage_target_cond=[0.5 0.12]; % Frequency of targets across conditions
 chunk_in_each_frequency=[1]; % enumerate chunks per each target frequency
@@ -24,158 +24,159 @@ for Subj=subjects
     for cndss=percentage_target_cond
         for chunk=chunk_in_each_frequency
             for blk=blocks_in_each_chunk
-                    correct_reaction_times_att=0;
-                    
-                    for i=3:size(dirs,1)
-                        if strcmp(dirs(i).name(end-3:end),'.mat')
+                correct_reaction_times_att=0;
 
-                            Condition_string=['Freq_',sprintf('%.2f', cndss),'_Aud_',sprintf('%d', Audio_recorded)];
-                            if strcmp(dirs(i).name,['Subj_',num2str(Subj),'_Blk_',num2str(blk),'_Chunk_',num2str(chunk),'_','_',Condition_string,'_test_Distraction.mat'])
-                                load(dirs(i).name);
-                                [dirs(i).name]
+                for i=3:size(dirs,1)
+                    if strcmp(dirs(i).name(end-3:end),'.mat')
 
-                                % Cue request detection
-                                refractory=300; % ignore cue presses with intervals shorter than this /60
-                                cued=0;
-                                for tt=refractory+1:length(cue_time_indx)
-                                    if cue_time_indx(tt-1)==0 && cue_time_indx(tt)==1 && sum(cue_time_indx(tt-refractory:tt-1))==0
-                                        cued=cued+1;
-                                    end
-                                end                               
-                                Targ_Freq_Condition_blk=str2double(dirs(i).name(end-30:end-27));
+                        Condition_string=['Freq_',sprintf('%.2f', cndss),'_Aud_',sprintf('%d', Audio_recorded)];
+                        if strcmp(dirs(i).name,['Subj_',num2str(Subj),'_Blk_',num2str(blk),'_Chunk_',num2str(chunk),'_','_',Condition_string,'_test_Distraction.mat'])
+                            load(dirs(i).name);
+                            [dirs(i).name]
+
+                            % Cue request detection
+                            refractory=300; % ignore cue presses with intervals shorter than this /60
+                            cued=0;
+                            for tt=refractory+1:length(cue_time_indx)
+                                if cue_time_indx(tt-1)==0 && cue_time_indx(tt)==1 && sum(cue_time_indx(tt-refractory:tt-1))==0
+                                    cued=cued+1;
+                                end
                             end
+                            Targ_Freq_Condition_blk=str2double(dirs(i).name(end-30:end-27));
                         end
                     end
-                    
-                    mean_sampling_time=1./60;
-                    for dot_num=1:Num_moving_dots*Trials_per_block
-                        tr=ceil(dot_num./Num_moving_dots);
-                        dot_in_trial=dot_num-(tr-1).*Num_moving_dots;
-                        
-                        if ~isempty(find(key_pressed1(dot_in_trial,:,tr),1))
-                            
-                            key_press_sample=find(key_pressed1(dot_in_trial,:,tr), 1, 'first');
-                            if isnan(distance_traj1(dot_num,key_press_sample))
-                                distance_traj1(dot_num,key_press_sample)=3000;
-                            end
-                            dist_relative_to_boundary(dot_in_trial,tr)=distance_traj1(dot_num,key_press_sample)-hitting_border_distance;
-                        else
-                            dist_relative_to_boundary(dot_in_trial,tr)=nan;
-                        end
-                        distance_change_per_sample(dot_in_trial,tr)=(distance_traj1(dot_num,appearance_time(dot_in_trial,tr)+10)-distance_traj1(dot_num,appearance_time(dot_in_trial,tr)+20))./(11);
-                        
-                        if ~isempty(find(key_pressed2(dot_in_trial,:,tr),1))
-                            
-                            key_press_sample2=find(key_pressed2(dot_in_trial,:,tr), 1, 'first' );
-                            if isnan(distance_traj2(dot_num,key_press_sample2))
-                                distance_traj2(dot_num,key_press_sample)=3000;
-                            end
-                            dist_relative_to_boundary2(dot_in_trial,tr)=distance_traj2(dot_num,key_press_sample2)-hitting_border_distance;
-                        else
-                            dist_relative_to_boundary2(dot_in_trial,tr)=nan;
-                        end
-                        distance_change_per_sample2(dot_in_trial,tr)=(distance_traj2(dot_num,appearance_time2(dot_in_trial,tr)+10)-distance_traj2(dot_num,appearance_time2(dot_in_trial,tr)+20))./(11);
-                    end
-                    
-                    
-                    distance_change_per_sample(distance_change_per_sample<0)=mean(distance_change_per_sample(distance_change_per_sample>0));
-                    distance_change_per_sample2(distance_change_per_sample2<0)=mean(distance_change_per_sample2(distance_change_per_sample2>0));
-                    
-                    reaction_times=((-dist_relative_to_boundary)./distance_change_per_sample).*mean_sampling_time;
-                    reaction_times2=((-dist_relative_to_boundary2)./distance_change_per_sample2).*mean_sampling_time;
-                    %% Behavioural Performance
-                    
-                    % attended
-                    tp_att=0;
-                    tn_att=0;
-                    fp_F_att=0;
-                    fp_S_att=0;
-                    fp_T_att=0;
-                    fn_att=0;
-                    
-                    g=0;
-                    for dot_num=1:Num_moving_dots*Trials_per_block
-                        tr=ceil(dot_num./Num_moving_dots);
-                        dot_in_trial=dot_num-(tr-1).*Num_moving_dots;
-                        
-                        
-                        if sum(dot_in_trial==top_events(:,tr))==1 && dot_color(dot_in_trial,tr)==Cued_color_in_block(1,blk)
-                            g=g+1;
-                            if isnan(reaction_times(dot_in_trial,tr)) && (top_events(tr)~=top_targets(tr))
-                                tn_att=tn_att+1;    % number of non-target events with no resp;
-                            elseif ~isnan(reaction_times(dot_in_trial,tr)) && top_events(tr)~=top_targets(tr) && (reaction_times(dot_in_trial,tr)<0)
-                                fp_F_att=fp_F_att+1;    % number of non-target events with fast resp;
-                            elseif ~isnan(reaction_times(dot_in_trial,tr)) && top_events(tr)~=top_targets(tr) && (reaction_times(dot_in_trial,tr)>=0)
-                                fp_S_att=fp_S_att+1;    % number of non-target events with Slow resp;
-                            elseif ~isnan(reaction_times(dot_in_trial,tr)) && top_events(tr)==top_targets(tr) && (reaction_times(dot_in_trial,tr)<0)
-                                fp_T_att=fp_T_att+1;    % number of target events with Too early resp;
-                            elseif isnan(reaction_times(dot_in_trial,tr)) && top_events(tr)==top_targets(tr)
-                                fn_att=fn_att+1;    % number of target events with no resp;
-                            elseif ~isnan(reaction_times(dot_in_trial,tr)) && top_events(tr)==top_targets(tr) && reaction_times(dot_in_trial,tr)>0
-                                tp_att=tp_att+1;    % number of target events with resp;
-                                correct_reaction_times_att=correct_reaction_times_att+reaction_times(dot_in_trial,tr);
-                            end
-                        end
-                        
-                        if sum(dot_in_trial==top_events2(:,tr))==1 && dot_color2(dot_in_trial,tr)==Cued_color_in_block(1,blk)
-                            g=g+1;
-                            if isnan(reaction_times2(dot_in_trial,tr)) && (top_events2(tr)~=top_targets2(tr))
-                                tn_att=tn_att+1;
-                            elseif ~isnan(reaction_times2(dot_in_trial,tr)) && top_events2(tr)~=top_targets2(tr) && (reaction_times2(dot_in_trial,tr)<0)
-                                fp_F_att=fp_F_att+1;
-                            elseif ~isnan(reaction_times2(dot_in_trial,tr)) && top_events2(tr)~=top_targets2(tr) && (reaction_times2(dot_in_trial,tr)>=0)
-                                fp_S_att=fp_S_att+1;
-                            elseif ~isnan(reaction_times2(dot_in_trial,tr)) && top_events2(tr)==top_targets2(tr) && (reaction_times2(dot_in_trial,tr)<0)% || reaction_times2(dot_in_trial,tr)>time_to_touch_the_obstacle2(dot_in_trial,tr))
-                                fp_T_att=fp_T_att+1;
-                            elseif isnan(reaction_times2(dot_in_trial,tr)) && top_events2(tr)==top_targets2(tr)
-                                fn_att=fn_att+1;
-                            elseif ~isnan(reaction_times2(dot_in_trial,tr)) && top_events2(tr)==top_targets2(tr) && reaction_times2(dot_in_trial,tr)>0 %&& reaction_times2(dot_in_trial,tr)<time_to_touch_the_obstacle2(dot_in_trial,tr)
-                                tp_att=tp_att+1;
-                                correct_reaction_times_att=correct_reaction_times_att+reaction_times2(dot_in_trial,tr);
-                            end
-                        end
-                    end
-                    
-                    fp_att=fp_F_att+fp_S_att+fp_T_att;
-                    correct_reaction_times_att=correct_reaction_times_att./tp_att;
-                    % Removed the unattended dots for simplicity of the data
-                    
-                    blk_all=(chunk-1)*max(blocks_in_each_chunk)+blk;
-                    [~,cond]=ismember(cndss,percentage_target_cond);
-                    if Targ_Freq_Condition_blk==cndss
-                        % Accuracy
-                        Data{cond,1}(blk_all,Subj)=(tp_att+tn_att)./(sum(top_events>0)+sum(top_events2>0));
-                        % Hit rate
-                        Data{cond,2}(blk_all,Subj)=(tp_att)./(tp_att+fn_att);
-                        
-                        % True negative rate
-                        Data{cond,3}(blk_all,Subj)=(tn_att)./(tn_att+fp_att);
-                        
-                        % False alarm
-                        Data{cond,4}(blk_all,Subj)=(fp_att)./(fp_att+tn_att);
-                        
-                        % Miss
-                        Data{cond,5}(blk_all,Subj)=(fn_att)./(tp_att+fn_att);
-                        
-                        % Dprime
-                        Data{cond,6}(blk_all,Subj)=Data{cond,2}(blk_all,Subj)-Data{cond,4}(blk_all,Subj);
-                        
-                        % Reaction time
-                        Data{cond,7}(blk_all,Subj)=correct_reaction_times_att;
-                        
-                        % Record cues as well
-                        Data{cond,8}(blk_all,Subj)=cued;
+                end
 
+                mean_sampling_time=1./60;
+                for dot_num=1:Num_moving_dots*Trials_per_block
+                    tr=ceil(dot_num./Num_moving_dots);
+                    dot_in_trial=dot_num-(tr-1).*Num_moving_dots;
+
+                    if ~isempty(find(key_pressed1(dot_in_trial,:,tr),1))
+
+                        key_press_sample=find(key_pressed1(dot_in_trial,:,tr), 1, 'first');
+                        if isnan(distance_traj1(dot_num,key_press_sample))
+                            distance_traj1(dot_num,key_press_sample)=3000;
+                        end
+                        dist_relative_to_boundary(dot_in_trial,tr)=distance_traj1(dot_num,key_press_sample)-hitting_border_distance;
                     else
-                        Data{cond,1}(blk_all,Subj)=nan;
-                        Data{cond,2}(blk_all,Subj)=nan;
-                        Data{cond,3}(blk_all,Subj)=nan;
-                        Data{cond,4}(blk_all,Subj)=nan;
-                        Data{cond,5}(blk_all,Subj)=nan;
-                        Data{cond,6}(blk_all,Subj)=nan;
-                        Data{cond,7}(blk_all,Subj)=nan;
-                        Data{cond,8}(blk_all,Subj)=nan;
+                        dist_relative_to_boundary(dot_in_trial,tr)=nan;
                     end
+                    distance_change_per_sample(dot_in_trial,tr)=(distance_traj1(dot_num,appearance_time(dot_in_trial,tr)+10)-distance_traj1(dot_num,appearance_time(dot_in_trial,tr)+20))./(11);
+
+                    if ~isempty(find(key_pressed2(dot_in_trial,:,tr),1))
+
+                        key_press_sample2=find(key_pressed2(dot_in_trial,:,tr), 1, 'first' );
+                        if isnan(distance_traj2(dot_num,key_press_sample2))
+                            distance_traj2(dot_num,key_press_sample)=3000;
+                        end
+                        dist_relative_to_boundary2(dot_in_trial,tr)=distance_traj2(dot_num,key_press_sample2)-hitting_border_distance;
+                    else
+                        dist_relative_to_boundary2(dot_in_trial,tr)=nan;
+                    end
+                    distance_change_per_sample2(dot_in_trial,tr)=(distance_traj2(dot_num,appearance_time2(dot_in_trial,tr)+10)-distance_traj2(dot_num,appearance_time2(dot_in_trial,tr)+20))./(11);
+                end
+
+
+                distance_change_per_sample(distance_change_per_sample<0)=mean(distance_change_per_sample(distance_change_per_sample>0));
+                distance_change_per_sample2(distance_change_per_sample2<0)=mean(distance_change_per_sample2(distance_change_per_sample2>0));
+
+                reaction_times=((-dist_relative_to_boundary)./distance_change_per_sample).*mean_sampling_time;
+                reaction_times2=((-dist_relative_to_boundary2)./distance_change_per_sample2).*mean_sampling_time;
+                %% Behavioural Performance
+
+                % attended
+                tp_att=0;
+                tn_att=0;
+                fp_F_att=0;
+                fp_S_att=0;
+                fp_T_att=0;
+                fn_att=0;
+
+                g=0;
+                for dot_num=1:Num_moving_dots*Trials_per_block
+                    tr=ceil(dot_num./Num_moving_dots);
+                    dot_in_trial=dot_num-(tr-1).*Num_moving_dots;
+
+
+                    if sum(dot_in_trial==top_events(:,tr))==1 && dot_color(dot_in_trial,tr)==Cued_color_in_block(1,blk)
+                        g=g+1;
+                        if isnan(reaction_times(dot_in_trial,tr)) && (top_events(tr)~=top_targets(tr))
+                            tn_att=tn_att+1;    % number of non-target events with no resp;
+                        elseif ~isnan(reaction_times(dot_in_trial,tr)) && top_events(tr)~=top_targets(tr) && (reaction_times(dot_in_trial,tr)<0)
+                            fp_F_att=fp_F_att+1;    % number of non-target events with fast resp;
+                        elseif ~isnan(reaction_times(dot_in_trial,tr)) && top_events(tr)~=top_targets(tr) && (reaction_times(dot_in_trial,tr)>=0)
+                            fp_S_att=fp_S_att+1;    % number of non-target events with Slow resp;
+                        elseif ~isnan(reaction_times(dot_in_trial,tr)) && top_events(tr)==top_targets(tr) && (reaction_times(dot_in_trial,tr)<0)
+                            fp_T_att=fp_T_att+1;    % number of target events with Too early resp;
+                        elseif isnan(reaction_times(dot_in_trial,tr)) && top_events(tr)==top_targets(tr)
+                            fn_att=fn_att+1;    % number of target events with no resp;
+                        elseif ~isnan(reaction_times(dot_in_trial,tr)) && top_events(tr)==top_targets(tr) && reaction_times(dot_in_trial,tr)>0
+                            tp_att=tp_att+1;    % number of target events with resp;
+                            correct_reaction_times_att=correct_reaction_times_att+reaction_times(dot_in_trial,tr);
+                        end
+                    end
+
+                    if sum(dot_in_trial==top_events2(:,tr))==1 && dot_color2(dot_in_trial,tr)==Cued_color_in_block(1,blk)
+                        g=g+1;
+                        if isnan(reaction_times2(dot_in_trial,tr)) && (top_events2(tr)~=top_targets2(tr))
+                            tn_att=tn_att+1;
+                        elseif ~isnan(reaction_times2(dot_in_trial,tr)) && top_events2(tr)~=top_targets2(tr) && (reaction_times2(dot_in_trial,tr)<0)
+                            fp_F_att=fp_F_att+1;
+                        elseif ~isnan(reaction_times2(dot_in_trial,tr)) && top_events2(tr)~=top_targets2(tr) && (reaction_times2(dot_in_trial,tr)>=0)
+                            fp_S_att=fp_S_att+1;
+                        elseif ~isnan(reaction_times2(dot_in_trial,tr)) && top_events2(tr)==top_targets2(tr) && (reaction_times2(dot_in_trial,tr)<0)% || reaction_times2(dot_in_trial,tr)>time_to_touch_the_obstacle2(dot_in_trial,tr))
+                            fp_T_att=fp_T_att+1;
+                        elseif isnan(reaction_times2(dot_in_trial,tr)) && top_events2(tr)==top_targets2(tr)
+                            fn_att=fn_att+1;
+                        elseif ~isnan(reaction_times2(dot_in_trial,tr)) && top_events2(tr)==top_targets2(tr) && reaction_times2(dot_in_trial,tr)>0 %&& reaction_times2(dot_in_trial,tr)<time_to_touch_the_obstacle2(dot_in_trial,tr)
+                            tp_att=tp_att+1;
+                            correct_reaction_times_att=correct_reaction_times_att+reaction_times2(dot_in_trial,tr);
+                        end
+                    end
+                end
+
+                fp_att=fp_F_att+fp_S_att+fp_T_att;
+                correct_reaction_times_att=correct_reaction_times_att./tp_att;
+                % Removed the unattended dots for simplicity of the data
+
+                blk_all=(chunk-1)*max(blocks_in_each_chunk)+blk;
+                [~,cond]=ismember(cndss,percentage_target_cond);
+                if Targ_Freq_Condition_blk==cndss
+                    % Accuracy
+                    Data{cond,1}(blk_all,Subj)=(tp_att+tn_att)./(sum(top_events>0)+sum(top_events2>0));
+
+                    % Hit rate
+                    Data{cond,2}(blk_all,Subj)=(tp_att)./(tp_att+fn_att);
+
+                    % True negative rate
+                    Data{cond,3}(blk_all,Subj)=(tn_att)./(tn_att+fp_att);
+
+                    % False alarm
+                    Data{cond,4}(blk_all,Subj)=(fp_att)./(fp_att+tn_att);
+
+                    % Miss
+                    Data{cond,5}(blk_all,Subj)=(fn_att)./(tp_att+fn_att);
+
+                    % Dprime
+                    Data{cond,6}(blk_all,Subj)=Data{cond,2}(blk_all,Subj)-Data{cond,4}(blk_all,Subj);
+
+                    % Reaction time
+                    Data{cond,7}(blk_all,Subj)=correct_reaction_times_att;
+
+                    % Record cues as well
+                    Data{cond,8}(blk_all,Subj)=cued;
+
+                else
+                    Data{cond,1}(blk_all,Subj)=nan;
+                    Data{cond,2}(blk_all,Subj)=nan;
+                    Data{cond,3}(blk_all,Subj)=nan;
+                    Data{cond,4}(blk_all,Subj)=nan;
+                    Data{cond,5}(blk_all,Subj)=nan;
+                    Data{cond,6}(blk_all,Subj)=nan;
+                    Data{cond,7}(blk_all,Subj)=nan;
+                    Data{cond,8}(blk_all,Subj)=nan;
+                end
             end
         end
     end
@@ -197,41 +198,53 @@ for Subj=subjects
     cond=1;
     Hit_rate_condition=Data{cond,2}(:,Subj); % Hit rate in condition
     Mean_Hit_rate=nanmean(Hit_rate_condition);
+
+    FA_rate_condition=Data{cond,4}(:,Subj); % FA rate in condition
+    Mean_FA_rate=nanmean(FA_rate_condition);
+
     Reaction_time_condition=Data{cond,7}(:,Subj); % reaction time in condition
     Mean_Reaction_time=nanmean(Reaction_time_condition);
     Cues_shown_condition=Data{cond,8}(:,Subj); % extra cues shown in condition
     Mean_cues_shown=nanmean(Cues_shown_condition);
-    
+
     HR=[Hit_rate_condition;nan(5,1);Mean_Hit_rate];
+    FA=[FA_rate_condition;nan(5,1);Mean_FA_rate];
     RT=[Reaction_time_condition;nan(5,1);Mean_Reaction_time];
     Cues=[Cues_shown_condition;nan(5,1);Mean_cues_shown];
 
-    T = table(HR,RT,Cues);
-    T.Properties.VariableNames = {['Hit_rate_target_freq_',num2str(percentage_target_cond(cond)*100)] ['RT_target_freq_',num2str(percentage_target_cond(cond)*100)] ['Num_of_extra_cues_',num2str(percentage_target_cond(cond)*100)]};
+    T = table(HR,FA,RT,Cues);
+    T.Properties.VariableNames = {['Hit_rate_target_freq_',num2str(percentage_target_cond(cond)*100)] ['FA_rate_target_freq_',num2str(percentage_target_cond(cond)*100)] ['RT_target_freq_',num2str(percentage_target_cond(cond)*100)] ['Num_of_extra_cues_',num2str(percentage_target_cond(cond)*100)]};
     Ttotal=T;
-    Data_csv_total=[HR RT Cues];
-    
+    Data_csv_total=[HR FA RT Cues];
+
     for cond=2:size(Data,1)
-        
+
         Hit_rate_condition=Data{cond,2}(:,Subj); % Hit rate in condition
         Mean_Hit_rate=nanmean(Hit_rate_condition);
+
+        FA_rate_condition=Data{cond,4}(:,Subj); % FA rate in condition
+        Mean_FA_rate=nanmean(FA_rate_condition);
+
         Reaction_time_condition=Data{cond,7}(:,Subj); % reaction time in condition
         Mean_Reaction_time=nanmean(Reaction_time_condition);
         Cues_shown_condition=Data{cond,8}(:,Subj); % extra cues shown in condition
         Mean_cues_shown=nanmean(Cues_shown_condition);
+
         HR=[Hit_rate_condition;nan(5,1);Mean_Hit_rate];
+        FA=[FA_rate_condition;nan(5,1);Mean_FA_rate];
         RT=[Reaction_time_condition;nan(5,1);Mean_Reaction_time];
         Cues=[Cues_shown_condition;nan(5,1);Mean_cues_shown];
 
-        T = table(HR,RT,Cues);
-        T.Properties.VariableNames = {['Hit_rate_target_freq_',num2str(percentage_target_cond(cond)*100)] ['RT_target_freq_',num2str(percentage_target_cond(cond)*100)] ['Num_of_extra_cues_',num2str(percentage_target_cond(cond)*100)]};
+        T = table(HR,FA,RT,Cues);
+        T.Properties.VariableNames = {['Hit_rate_target_freq_',num2str(percentage_target_cond(cond)*100)] ['FA_rate_target_freq_',num2str(percentage_target_cond(cond)*100)] ['RT_target_freq_',num2str(percentage_target_cond(cond)*100)] ['Num_of_extra_cues_',num2str(percentage_target_cond(cond)*100)]};
+
         Ttotal=[Ttotal T];
-        Data_csv_total=horzcat(Data_csv_total,[HR RT Cues]);
+        Data_csv_total=horzcat(Data_csv_total,[HR FA RT Cues]);
     end
-    
+
     filename = ['MoM_data_distraction_audio_',num2str(Audio_recorded),'_manual_counter_balanced.xlsx']; % Change the name to anything you prefer
     writetable(Ttotal,filename,'Sheet',['Subj_' num2str(Subj)])
-    
+
     [Subj]
 end
 %% Plotting some results
